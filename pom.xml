@@ -8,37 +8,15 @@
     <artifactId>MQTT_SparkKafka2Sink</artifactId>
     <version>1.0-SNAPSHOT</version>
 
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>8</source>
-                    <target>8</target>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <scala.version>2.11.8</scala.version>
-        <scala.v>2.11</scala.v>
-        <hadoop.version>2.6.5</hadoop.version>
-        <spark.version>2.2.0</spark.version>
-        <kudu.version>1.6.0-cdh5.14.0</kudu.version>
+        <scala.version>2.12.10</scala.version>
+        <scala.v>2.12</scala.v>
+        <hadoop.version>3.2.0</hadoop.version>
+        <spark.version>3.1.2</spark.version>
     </properties>
 
     <dependencies>
-
-        <!--        <dependency>-->
-        <!--            <groupId>net.jpountz.lz4</groupId>-->
-        <!--            <artifactId>lz4</artifactId>-->
-        <!--            <version>1.3.0</version>-->
-        <!--        </dependency>-->
-
         <!-- 导入scala依赖-->
         <dependency>
             <groupId>org.scala-lang</groupId>
@@ -46,40 +24,11 @@
             <version>${scala.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.5.6</version>
-        </dependency>
-
         <!-- 导入hadoop依赖-->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>${hadoop.version}</version>
-        </dependency>
-        <!--导入kudu客户端依赖-->
-        <!-- https://mvnrepository.com/artifact/org.apache.kudu/kudu-client -->
-        <dependency>
-            <groupId>org.apache.kudu</groupId>
-            <artifactId>kudu-client</artifactId>
-            <version>${kudu.version}</version>
-        </dependency>
-
-        <!--导入kudu客户端工具类依赖-->
-        <!-- https://mvnrepository.com/artifact/org.apache.kudu/kudu-client-tools -->
-        <dependency>
-            <groupId>org.apache.kudu</groupId>
-            <artifactId>kudu-client-tools</artifactId>
-            <version>${kudu.version}</version>
-        </dependency>
-
-        <!--导入kudu整合spark的依赖-->
-        <!-- https://mvnrepository.com/artifact/org.apache.kudu/kudu-spark2 -->
-        <dependency>
-            <groupId>org.apache.kudu</groupId>
-            <artifactId>kudu-spark2_${scala.v}</artifactId>
-            <version>${kudu.version}</version>
         </dependency>
 
         <!--导入sparkcore依赖-->
@@ -97,13 +46,6 @@
             <version>${spark.version}</version>
         </dependency>
 
-        <!-- 导入加载配置文件的依赖-->
-        <dependency>
-            <groupId>com.typesafe</groupId>
-            <artifactId>config</artifactId>
-            <version>1.2.1</version>
-        </dependency>
-
         <!--MySQL链接驱动-->
         <dependency>
             <groupId>mysql</groupId>
@@ -113,20 +55,14 @@
 
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-streaming_2.11</artifactId>
-            <version>2.2.0</version>
+            <artifactId>spark-streaming_${scala.v}</artifactId>
+            <version>${spark.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-streaming-kafka-0-10_2.11</artifactId>
-            <version>2.2.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.influxdb</groupId>
-            <artifactId>influxdb-java</artifactId>
-            <version>2.15</version>
+            <artifactId>spark-streaming-kafka-0-10_${scala.v}</artifactId>
+            <version>${spark.version}</version>
         </dependency>
 
         <dependency>
@@ -136,15 +72,86 @@
         </dependency>
 
         <dependency>
-            <groupId>ru.yandex.clickhouse</groupId>
-            <artifactId>clickhouse-jdbc</artifactId>
-            <version>0.2</version>
+            <groupId>c3p0</groupId>
+            <artifactId>c3p0</artifactId>
+            <version>0.9.1.2</version>
         </dependency>
 
         <dependency>
-            <groupId>com.typesafe</groupId>
-            <artifactId>config</artifactId>
-            <version>1.2.1</version>
+            <groupId>commons-dbutils</groupId>
+            <artifactId>commons-dbutils</artifactId>
+            <version>1.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.oracle</groupId>
+            <artifactId>ojdbc14</artifactId>
+            <version>11.2.0.4</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <encoding>UTF-8</encoding>
+                    <!--    <verbal>true</verbal>-->
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <args>
+                                <arg>-dependencyfile</arg>
+                                <arg>${project.build.directory}/.scala_dependencies</arg>
+                            </args>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.1.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.zhbr.kafka2sink.Test4</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
