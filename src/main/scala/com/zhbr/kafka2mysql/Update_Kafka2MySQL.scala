@@ -76,16 +76,21 @@ object Update_Kafka2MySQL {
         val gatewayId = gatewayId_str.substring(0, gatewayId_str.indexOf("/"))
         val datas_JSONObject: JSONObject = JSON.parseObject(line).getJSONObject("topicData")
         val datas_JSONArray: JSONArray = datas_JSONObject.getJSONArray("deviceStatuses")
-        for (x <- 0 to datas_JSONArray.size()-1){
-          val realDataJson = datas_JSONArray.getJSONObject(x)
-          val deviceName = realDataJson.getString("deviceId")
-          if (realDataJson.getString("status").equals("online")){
-            status = "在线"
-          }else{
-            status = "离线"
+        if (datas_JSONArray!=null & !datas_JSONArray.isEmpty){
+          for (x <- 0 to datas_JSONArray.size()-1){
+            val realDataJson = datas_JSONArray.getJSONObject(x)
+            val deviceName = realDataJson.getString("deviceId")
+            val str_status = realDataJson.getString("status")
+            if (str_status.equals("online")){
+              status = "在线"
+            }else if(str_status.equals("offline")){
+              status = "离线"
+            }else{
+              status = ""
+            }
+            val deviceId = getDeviceId(queryRunner, gatewayId, deviceName)
+            queryRunner.update("update US_APP.SENSOR set OPERATIONSTATUS = '"+status+"' where SENSORCODE = "+deviceId)
           }
-          val deviceId = getDeviceId(queryRunner, gatewayId, deviceName)
-          queryRunner.update("update US_APP.SENSOR set OPERATIONSTATUS = '"+status+"' where SENSORCODE = "+deviceId)
         }
       })
     )
@@ -125,8 +130,12 @@ object Update_Kafka2MySQL {
    */
   private def getDeviceId(queryRunner :QueryRunner,gatewayId:String,deviceName:String) ={
     val list: util.List[util.Map[String, AnyRef]] = queryRunner.query("select c.SENSORCODE from US_APP.SENSOR c join (select SENSORCODE from US_APP.MONITORINGPOINTSENSORCONFIGURA a join (SELECT MONITORINGPOINTCODE FROM US_APP.OBJECTMONITORINGPOINTS WHERE PLATFORMCODE = '"+gatewayId+"') b\n\ton a.MONITORINGPOINTCODE = b.MONITORINGPOINTCODE) d on c.SENSORCODE = d.SENSORCODE and SENSORNAME = '"+deviceName+"'",new MapListHandler())
-    val map: util.Map[String, AnyRef] = list.get(0)
-    val SENSORCODE: String = map.get("SENSORCODE").toString
-    SENSORCODE
+    if (list.size()>0){
+      val map: util.Map[String, AnyRef] = list.get(0)
+      val SENSORCODE: String = map.get("SENSORCODE").toString
+      SENSORCODE
+    }else{
+      null
+    }
   }
 }

@@ -88,7 +88,7 @@ object CommandResponse_Kafka2MySQL {
         val cmdType = tuple._2
 
         //errcode为0时进一步解析json
-        if (errcode==0){
+        if (errcode==0 & dataArray!=null & !dataArray.isEmpty){
           cmdType.toLowerCase match {
               //获取数据command
             case "data_get" => {
@@ -106,7 +106,9 @@ object CommandResponse_Kafka2MySQL {
                   val sdformat: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
                   val currentTime: String = sdformat.format(date)
                   //数据保存
-                  putData2RDBMS(queryRunner,targetTable,monitoringPointCode,currentTime,param_value)
+                  if (targetTable!=null & monitoringPointCode!=null){
+                    putData2RDBMS(queryRunner,targetTable,monitoringPointCode,currentTime,param_value)
+                  }
                 }
               }
             }
@@ -149,7 +151,7 @@ object CommandResponse_Kafka2MySQL {
     * @param table
     * @param sql
     */
-  def dataFrame2MySQL(sparkconf:SparkConf,line:String,table:String,sql:String): Unit ={
+  private def dataFrame2MySQL(sparkconf:SparkConf,line:String,table:String,sql:String): Unit ={
     val session = SparkSession.builder().config(sparkconf).getOrCreate()
     val prop = new Properties()
     prop.setProperty("user", db_userName)
@@ -238,15 +240,19 @@ object CommandResponse_Kafka2MySQL {
     * @return
     */
   private def toTimeStamp(time_str:String) ={
-    val year: String = time_str.substring(0, 4)
-    val month: String = time_str.substring(4, 6)
-    val day: String = time_str.substring(6, 8)
-    val hh: String = time_str.substring(9, 11)
-    val mm: String = time_str.substring(11, 13)
-    val ss: String = time_str.substring(13, 15)
-    val dateTime: String = year + "-" + month + "-" + day + " " + hh + ":" + mm + ":" + ss
-    val timestamp: Timestamp = Timestamp.valueOf(dateTime)
-    timestamp
+    if (time_str!=null & time_str.equals("")) {
+      val year: String = time_str.substring(0, 4)
+      val month: String = time_str.substring(4, 6)
+      val day: String = time_str.substring(6, 8)
+      val hh: String = time_str.substring(9, 11)
+      val mm: String = time_str.substring(11, 13)
+      val ss: String = time_str.substring(13, 15)
+      val dateTime: String = year + "-" + month + "-" + day + " " + hh + ":" + mm + ":" + ss
+      val timestamp: Timestamp = Timestamp.valueOf(dateTime)
+      timestamp
+    }else{
+      null
+    }
   }
 
   /**
@@ -257,9 +263,13 @@ object CommandResponse_Kafka2MySQL {
     */
   private def getMonitorId(queryRunner :QueryRunner,gatewayId:String,monitorId:String) ={
     val list: util.List[util.Map[String, AnyRef]] = queryRunner.query("SELECT MONITORINGPOINTCODE FROM US_APP.OBJECTMONITORINGPOINTS WHERE PLATFORMCODE = '"+gatewayId+"' AND MONITORINGPOINTNAME = '"+monitorId+"'",new MapListHandler())
-    val map: util.Map[String, AnyRef] = list.get(0)
-    val MONITORINGPOINTCODE: String = map.get("MONITORINGPOINTCODE").toString
-    MONITORINGPOINTCODE
+    if (!list.isEmpty){
+      val map: util.Map[String, AnyRef] = list.get(0)
+      val MONITORINGPOINTCODE: String = map.get("MONITORINGPOINTCODE").toString
+      MONITORINGPOINTCODE
+    }else{
+      null
+    }
   }
 
   /**
@@ -270,9 +280,13 @@ object CommandResponse_Kafka2MySQL {
     */
   private def getDeviceId(queryRunner :QueryRunner,gatewayId:String,deviceName:String) ={
     val list: util.List[util.Map[String, AnyRef]] = queryRunner.query("select c.SENSORCODE from US_APP.SENSOR c join (select SENSORCODE from US_APP.MONITORINGPOINTSENSORCONFIGURA a join (SELECT MONITORINGPOINTCODE FROM US_APP.OBJECTMONITORINGPOINTS WHERE PLATFORMCODE = '"+gatewayId+"') b\n\ton a.MONITORINGPOINTCODE = b.MONITORINGPOINTCODE) d on c.SENSORCODE = d.SENSORCODE and SENSORNAME = '"+deviceName+"'",new MapListHandler())
-    val map: util.Map[String, AnyRef] = list.get(0)
-    val SENSORCODE: String = map.get("SENSORCODE").toString
-    SENSORCODE
+    if (!list.isEmpty){
+      val map: util.Map[String, AnyRef] = list.get(0)
+      val SENSORCODE: String = map.get("SENSORCODE").toString
+      SENSORCODE
+    }else{
+      null
+    }
   }
 
   /**

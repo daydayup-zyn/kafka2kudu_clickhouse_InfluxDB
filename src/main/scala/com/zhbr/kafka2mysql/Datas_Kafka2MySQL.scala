@@ -77,19 +77,23 @@ object Datas_Kafka2MySQL {
       rdd =>if (!rdd.isEmpty()) rdd.foreach(line=>{
         val datas_JSONObject: JSONObject = JSON.parseObject(line).getJSONObject("topicData")
         val datas_JSONArray: JSONArray = datas_JSONObject.getJSONArray("devices")
-        for (x <- 0 to datas_JSONArray.size()-1){
-          val realDataJson = datas_JSONArray.getJSONObject(x)
-          val deviceId = realDataJson.getString("deviceId")
-          val eventTime = realDataJson.getString("eventTime")
-          val data = realDataJson.getJSONObject("data")
-          val keySet: util.Iterator[String] = data.keySet().iterator()
-          while (keySet.hasNext){
-            val param_key = keySet.next()
-            val param_value = data.get(param_key)
-            val tuple: (String, String) = getTargetTableAndMonitoringPointCode(queryRunner,deviceId,param_key)
-            val targetTable = tuple._1
-            val monitoringPointCode = tuple._2
-            putData2RDBMS(queryRunner,targetTable,monitoringPointCode,eventTime,param_value)
+        if (datas_JSONArray!=null & !datas_JSONArray.isEmpty){
+          for (x <- 0 to datas_JSONArray.size()-1){
+            val realDataJson = datas_JSONArray.getJSONObject(x)
+            val deviceId = realDataJson.getString("deviceId")
+            val eventTime = realDataJson.getString("eventTime")
+            val data = realDataJson.getJSONObject("data")
+            val keySet: util.Iterator[String] = data.keySet().iterator()
+            while (keySet.hasNext){
+              val param_key = keySet.next()
+              val param_value = data.get(param_key)
+              val tuple: (String, String) = getTargetTableAndMonitoringPointCode(queryRunner,deviceId,param_key)
+              val targetTable = tuple._1
+              val monitoringPointCode = tuple._2
+              if (targetTable!=null & monitoringPointCode!=null){
+                putData2RDBMS(queryRunner,targetTable,monitoringPointCode,eventTime,param_value)
+              }
+            }
           }
         }
       })
