@@ -5,9 +5,7 @@ import java.sql.Timestamp
 import java.util
 import java.util.{Date, Properties, UUID}
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
-import com.zhbr.kafka2mysql.Datas_Kafka2MySQL.{convert, getTargetTableAndMonitoringPointCode, putData2RDBMS, queryRunner, toTimeStamp}
 import com.zhbr.util.JDBCUtil
-
 import javax.sql.rowset.serial.SerialBlob
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
@@ -21,7 +19,6 @@ import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 import org.apache.spark.streaming.kafka010.KafkaUtils
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.{Seconds, StreamingContext}
-
 import java.text.SimpleDateFormat
 
 object CommandResponse_Kafka2MySQL {
@@ -38,9 +35,17 @@ object CommandResponse_Kafka2MySQL {
   private val kafka_servers = properties.getProperty("kafka.servers")
   private val kafka_group = properties.getProperty("kafka.group")
   private val kafka_topic = properties.getProperty("kafka.topic.commandResponse")
+  private val checkpoint_path = properties.getProperty("hdfs.checkpoint.path")
   private var queryRunner :QueryRunner = null
+  private var hdfs_checkpoint_path :String = null
 
   def main(args: Array[String]): Unit = {
+
+    if (checkpoint_path.endsWith("/")){
+      hdfs_checkpoint_path = checkpoint_path
+    }else{
+      hdfs_checkpoint_path = checkpoint_path + "/"
+    }
 
     //设置日志级别
     Logger.getLogger("org.apache.spark").setLevel(Level.WARN)
@@ -51,7 +56,7 @@ object CommandResponse_Kafka2MySQL {
     //构建StreamingContext对象
     val ssc: StreamingContext = new StreamingContext(sparkConf,Seconds(5))
     //设置检查点,通常生产环境当中，为了保证数据不丢失，将数据放到hdfs之上，hdfs的高容错，多副本特征
-    ssc.checkpoint("./kafka-chk2")
+    ssc.checkpoint(hdfs_checkpoint_path+"CommandResponse_Kafka2MySQL")
 
     //设置kafkaParams
     val kafkaParams=Map(
@@ -213,13 +218,12 @@ object CommandResponse_Kafka2MySQL {
     targetTable.toUpperCase match {
       case "RTDINTEM" | "RTDPICTURE" => {
         sqlStr = "insert into "+targetTable+" values(?,?,?,?,?,?)"
-        val serialBlob = new SerialBlob(convert(param_value))
         arrayList.add(RTDCode)
         arrayList.add(pointCode)
         arrayList.add(timestamp)
         arrayList.add(null)
         arrayList.add(null)
-        arrayList.add(serialBlob)
+        arrayList.add(param_value.toString)
         flag = queryRunner.update(sqlStr,arrayList.toArray)
       }
       case "RTDTEV" | "RTDULT" | "RTDVIB" =>{
@@ -240,7 +244,7 @@ object CommandResponse_Kafka2MySQL {
     * @return
     */
   private def toTimeStamp(time_str:String) ={
-    if (time_str!=null & time_str.equals("")) {
+    if (time_str!=null & !time_str.isEmpty) {
       val year: String = time_str.substring(0, 4)
       val month: String = time_str.substring(4, 6)
       val day: String = time_str.substring(6, 8)
